@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<link rel="stylesheet" href="easyui/themes/bootstrap/easyui.css" />
+<link rel="stylesheet" href="easyui/themes/icon.css" />
+<script type="text/javascript" src="easyui/jquery.min.js" ></script>
+<script type="text/javascript" src="easyui/jquery.easyui.min.js" ></script>
+<script type="text/javascript" src="easyui/locale/easyui-lang-zh_CN.js" ></script>
+<script type="text/javascript" src="adminjs/form.js" ></script>
+</head>
+<body>
+	<!-- 条件搜索 -->
+	<fieldset>
+		<legend>条件搜索</legend>
+		<label for="name">姓名：</label><input id="name" name="name"/>
+		<label for="num">学号：</label><input id="num" name="num"/>
+		<button id="searchBtn">搜索</button>
+	</fieldset><br/>
+	<!-- 使用datagrid组件 -->
+	<table id="dg"></table>
+	<!-- 对话框 -->
+	<div id="dl">
+		<div style="margin-left:30px; margin-top:20px;">
+			<form id="studentForm">
+				<!-- 定义一个隐藏域，用于记录修改学生的ID -->
+				<input type="hidden" id="id" name="id"/>
+				<label for="userName">姓名：</label><input id="userName" name="name"/><br/><br/>
+				<label for="userNum">学号：</label><input id="userNum" name="num"/><br/><br/>
+				<label for="rfid">rfid：</label><input id="rfid" name="rfid"/><br/><br/>
+			</form>
+		</div>
+	</div>
+	<script>
+		var requestUrl; // 定义一个变量，记录保存操作的url地址
+	
+		// 初始化datagrid组件
+		$(function(){
+			
+			// 给搜索按钮绑定点击事件
+			$("#searchBtn").click(function() {
+				// 获取搜索输入框的内容
+				var name = $("#name").val();
+				var num = $("#num").val();
+				// 加载表格数据
+				$('#dg').datagrid('load', {'name': name, 'num': num});
+			});
+			
+			// 初始化对话框
+			$('#dl').dialog({
+				title: '学生信息', // 标题
+				width: 300, // 宽度
+			    height: 200, // 高度
+				closed: true, // 默认是否关闭，true代表默认关闭
+				cache: false, // 是否缓存
+				modal: true, // 是否显示遮挡层
+				buttons:[{ // 按钮
+				      text:'保存', 
+				      handler:function(){
+				    	  // 警告框
+				    	  //$.messager.alert('系统提示','这里是点击保存触发的事件');
+				    	  var name = $("#userName").val();
+				    	  var num = $("#userNum").val();
+				    	  var rfid = $("#rfid").val();
+				    	  if (name == '') {
+				    		  $.messager.alert('警告', '姓名不能够为空！');
+				    		  return;
+				    	  }
+				    	  if (num == '') {
+				    		  $.messager.alert('警告', '学号不能够为空！');
+				    		  return;
+				    	  }
+				    	  if (rfid == '') {
+				    		  $.messager.alert('警告', 'rfid不能够为空！');
+				    		  return;
+				    	  }
+				    	  // 获取表单所有参数
+				    	  var data = getFormData("studentForm");
+				    	  // alert(JSON.stringify(data));
+				    	  
+				    	  // 发送数据给后台处理
+				    	  $.post(requestUrl, data, function(data) {
+				    		  if (data.status) {
+				    			  // 重新加载表格
+				    			  $("#dg").datagrid('reload');
+				    			  // 关闭对话框
+				    			  $('#dl').dialog('close');
+				    			  // 清空输入记录
+				    			  $("#id").val('');
+				    			  $("#userName").val('');
+				    			  $("#userNum").val('');
+				    			  $("#rfid").val('');
+				    		  } else {
+				    			  $.messager.alert('警告', data.message);
+				    		  }
+				    	  }, "json");
+				    	  
+				      }
+				},{
+				      text:'取消',
+				      handler:function(){
+				    	  // 关闭对话框
+				    	  $('#dl').dialog('close'); 
+				    	  // 清空输入记录
+		    			  $("#userName").val('');
+		    			  $("#userNum").val('');
+		    			  $("#rfid").val('');
+				   	  }
+				}]
+			});
+
+			
+			/* 
+				datagrid数据格式：
+				[
+				 	{id:'编号',name:'姓名',num:'学号',rfid:'rfid',state:'学生状态'},
+				 	{id:'编号',name:'姓名',num:'学号',rfid:'rfid',state:'学生状态'},
+				 	{id:'编号',name:'姓名',num:'学号',rfid:'rfid',state:'学生状态'},
+				 	{id:'编号',name:'姓名',num:'学号',rfid:'rfid',state:'学生状态'},
+				 	...
+				]
+			*/
+			$('#dg').datagrid({
+			    url:'student/getData.do',  
+			    method:'get',
+			    singleSelect: false,
+			    toolbar: [
+					{
+						iconCls: 'icon-add',
+						text: '添加',
+						handler: function(){
+							// 设置requestUrl
+							requestUrl = "student/add.do";
+							$("#dl").dialog('open'); // 打开对话框
+						}
+					},{
+						iconCls: 'icon-edit',
+						text: '修改',
+						handler: function(){
+							// 设置requestUrl
+							requestUrl = "student/update.do";
+							// 获取选中的行
+							var rowData = $("#dg").datagrid('getSelected');
+							if (rowData != null) {
+								// 加载对话框表单数据
+								$("#studentForm").form('load', rowData);
+								// 打开对话框
+								$("#dl").dialog('open');
+							}
+						}
+					},{
+						iconCls: 'icon-remove',
+						text: '删除',
+						handler: function(){
+							$.messager.confirm('警告', '确认删除吗？', function(r) {
+								if (r) {
+									// 获取选中行
+									var rowData = $("#dg").datagrid('getSelected');
+									var param = {id : rowData.id};
+									$.post('student/delete.do', param, function(data) {
+										if (data.status) {
+											// 删除成功后，重新加载表格
+											$('#dg').datagrid('reload');
+										} else {
+											$.messager.alert('警告', data.message);
+										}
+									}, 'json');
+								}
+							});
+						}
+					}, {
+						iconCls: 'icon-cancel',
+						text: '批量删除',
+						handler: function(){
+							// 获取选中行
+							var rows = $("#dg").datagrid('getSelections');
+							if (rows.length > 0) {
+								$.messager.confirm('警告', '确认删除吗？', function(r) {
+									if (r) {
+										// 该数组用于保存要删除的学生ID
+										var params = new Array();
+										for (var i = 0; i < rows.length; i++) {
+											params.push(rows[i].id);
+										}
+										$.post('student/deleteAll.do', {'ids' : params.join(',')}, function(data) {
+											if (data.status) {
+												// 删除成功后，重新加载表格
+												$('#dg').datagrid('reload');
+											} else {
+												$.messager.alert('警告', data.message);
+											}
+										}, 'json'); 
+									}
+								});
+							}
+						}
+					}     
+			    ],
+			    columns:[[
+					{checkbox:true,width:30},
+			        {field:'id',title:'编号',width:100},    
+			        {field:'name',title:'姓名',width:200},
+			        {field:'num',title:'学号',width:200},
+			        {field:'rfid',title:'rfid',width:200},
+			        {field:'state',title:'状态',width:200, formatter:function(value, rowData, rowIndex) {
+			        	return value == 0 ? "在读".fontcolor("green") : "已毕业".fontcolor("red");
+			        }}  
+			    ]],
+			    pagination: true, // 显示分页栏
+			    pageSize: 5, // 每页显示的结果数 
+			    pageList: [5, 15, 25, 50]
+			});  
+			
+			
+		});
+	</script>
+</body>
+</html>

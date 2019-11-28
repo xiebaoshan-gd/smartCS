@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<link rel="stylesheet" href="easyui/themes/bootstrap/easyui.css" />
+<link rel="stylesheet" href="easyui/themes/icon.css" />
+<script type="text/javascript" src="easyui/jquery.min.js" ></script>
+<script type="text/javascript" src="easyui/jquery.easyui.min.js" ></script>
+<script type="text/javascript" src="easyui/locale/easyui-lang-zh_CN.js" ></script>
+<script type="text/javascript" src="adminjs/form.js" ></script>
+</head>
+<body class="easyui-layout">
+	<div data-options="region:'west',split:true,title:'角色管理'" style="width:600px;">
+		<table id="dg"></table>
+	</div>
+	<div data-options="region:'center',title:'分配权限'">
+		<ul id="tree"></ul>
+		<button id="saveBtn" style="margin:10px;">保存</button>		
+	</div>
+	<div id="dl" style="padding:15px;">
+		<form id="roleForm">
+			<input type="hidden" id="id" name="id"/>
+			<label for="">角色名：</label><input id="name" name="name"/><br/><br/>
+			<label for="">描&nbsp;述：</label><textarea id="remark" name="remark" rows="3" cols="23"></textarea><br/>
+		</form>
+	</div>
+	<script>
+		var requestUrl;
+		var roleId; // 该全局变量用于保存选中的角色ID
+		
+		$(function() {
+			// 为保存按钮绑定事件
+			$("#saveBtn").click(function() {
+				if (roleId != null) {
+					var menuIds = new Array();
+					// 获取选中节点的ID
+					var selectedNodes = $("#tree").tree('getChecked');
+					for (var i = 0; i < selectedNodes.length; i++) {
+						var nodeId = selectedNodes[i].id; // 菜单ID
+						menuIds.push(nodeId);
+					}
+					// 请求参数
+					var param = {roleId: roleId, menuIds: menuIds.join(",")};
+					// 发送给后台处理
+					$.post('role/saveRoleMenu.do', param, function(data) {
+						$.messager.alert('提示', data.message);
+					}, 'json');
+				}
+			});
+			
+			
+			loadTree();
+			
+			// 初始化角色的表格
+			$("#dg").datagrid({
+				url: 'role/getData.do',
+			    method:'get',
+			    singleSelect: true,
+			    toolbar: [
+					{
+						iconCls: 'icon-add',
+						text: '添加',
+						handler: function(){
+							requestUrl = "role/addRole.do";
+							// 打开对话框
+							$("#dl").dialog('open');
+						}
+					},{
+						iconCls: 'icon-edit',
+						text: '修改',
+						handler: function(){
+							requestUrl = "role/updateRole.do";
+							// 获取选中行
+							var rowData = $("#dg").datagrid("getSelected");
+							if (rowData != null) {
+								// 把选中行的数据填充到表单中
+								$("#roleForm").form('load', rowData);
+								// 打开对话框
+								$("#dl").dialog('open');
+							}
+						}
+					},{
+						iconCls: 'icon-remove',
+						text: '删除',
+						handler: function(){
+							var rowData = $("#dg").datagrid("getSelected");
+							if (rowData != null) {
+								$.messager.confirm('警告', '确定删除吗？', function(r) {
+									if (r) {
+										var param = {id : rowData.id};
+										$.post('role/deleteRole.do', param, function(data) {
+											if (data.status) {
+												$("#dg").datagrid('reload');
+											} else {
+												$.messager.alert('警告', data.message);
+											}
+										}, "json");
+									}
+								});
+							}
+						}
+					}    
+			    ],
+			    columns:[[
+			        {field:'id',title:'编号',width:80},    
+			        {field:'name',title:'姓名',width:230},
+			        {field:'remark',title:'描述',width:230}  
+			    ]],
+			    onClickRow: function(rowIndex, rowData) {
+			    	roleId = rowData.id;
+			    	loadTree();
+			    }
+			});
+			
+			// 初始化对话框
+			$("#dl").dialog({
+				title: '角色信息', // 标题
+				width: 300, // 宽度
+			    height: 200, // 高度
+				closed: true, // 默认是否关闭，true代表默认关闭
+				cache: false, // 是否缓存
+				modal: true, // 是否显示遮挡层
+				buttons:[{ // 按钮
+					text: '保存',
+					handler: function() {
+						var name = $("#name").val();
+						if (name == '') {
+							$.messager.alert('警告', '角色名称不能为空！');
+							return;
+						}
+						var formData = getFormData("roleForm");
+						$.post(requestUrl, formData, function(data) {
+							if (data.status) {
+								// 刷新表格 
+								$("#dg").datagrid('reload');
+								// 清空输入框
+								$("#name").val('');
+								$("#remark").val('');
+								// 关闭对话框
+								$("#dl").dialog('close');
+							} else {
+								$.messager.alert('警告', data.message);
+							}
+						}, "json");
+					}
+				},{ 
+					text: '取消',
+					handler: function() {
+						$("#id").val('');
+						$("#name").val('');
+						$("#remark").val('');
+						$("#dl").dialog('close');
+					}
+				}]
+			});
+		});
+		
+		// 加载菜单树控件
+		function loadTree() {
+			$("#tree").tree({
+				url: 'menu/getTreeData.do?roleId=' + roleId,
+				checkbox: true
+			});
+		}
+	</script>
+</body>
+</html>

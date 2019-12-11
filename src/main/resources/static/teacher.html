@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<link rel="stylesheet" href="easyui/themes/bootstrap/easyui.css" />
+<link rel="stylesheet" href="easyui/themes/icon.css" />
+<script type="text/javascript" src="easyui/jquery.min.js" ></script>
+<script type="text/javascript" src="easyui/jquery.easyui.min.js" ></script>
+<script type="text/javascript" src="easyui/locale/easyui-lang-zh_CN.js" ></script>
+<script type="text/javascript" src="adminjs/form.js" ></script>
+</head>
+<body>
+	<!-- 条件搜索 -->
+	
+	<fieldset>
+		<legend>条件搜索</legend>
+		<label for="num">教师编号：</label><input id="num" name="num"/>
+		<label for="name">教师名字：</label><input id="name" name="name"/>
+		<label for="search-position">教师职称：</label><input id="search-position" name="search-position"/>
+		<button id="searchBtn">搜索</button>
+	</fieldset><br/>
+	<!-- 使用datagrid组件 -->
+	<table id="dg"></table>
+	<!-- 对话框 -->
+	<div id="dl">
+		<div style="margin-left:30px; margin-top:20px;">
+			<form id="teacherForm">
+				<!-- 定义一个隐藏域，用于记录修改课程的ID -->
+				<input type="hidden" id="id" name="id"/>
+				<label for="teachername">教师名字：</label><input id="teachername" name="teachername"/><br/><br/>
+				<label for="teachernum">教师编号：</label><input id="teachernum" name="teachernum"/><br/><br/>
+				<label for="sex">性别：</label><input id="sex" name="sex"/><br/><br/>
+				<label for="birth">出生日期：</label><input id="birth" name="birth"/><br/><br/>
+				<label for="starttime">入职时间：</label><input id="starttime" name="starttime"/><br/><br/>
+				<label for="address">家庭住址：</label><input id="address" name="address"/><br/><br/>
+				<label for="position">职称：</label><input id="position" name="position"/><br/><br/>
+				
+			</form>
+		</div>
+	</div>
+	<script>
+		var requestUrl; // 定义一个变量，记录保存操作的url地址
+		
+		// 初始化datagrid组件
+		$(function(){
+			
+			// 给搜索按钮绑定点击事件
+			$("#searchBtn").click(function() {
+				// 获取搜索输入框的内容
+				var name = $("#name").val();
+				var num = $("#num").val();
+				var position = $("#search-position").val();
+				// 加载表格数据
+				$('#dg').datagrid('load', {'teachername': name, 'teachernum': num,'position':position});
+			});
+			
+			// 初始化对话框
+			$('#dl').dialog({
+				title: '课程信息', // 标题
+				width: 300, // 宽度
+			    height: 200, // 高度
+				closed: true, // 默认是否关闭，true代表默认关闭
+				cache: false, // 是否缓存
+				modal: true, // 是否显示遮挡层
+				buttons:[{ // 按钮
+				      text:'保存', 
+				      handler:function(){
+				    	  // 警告框
+				    	  //$.messager.alert('系统提示','这里是点击保存触发的事件');
+				    	  var teachername = $("#teachername").val();
+				    	  var teachernum = $("#teachernum").val();
+				    	  var sex = $("#sex").val();
+				    	  var birth = $("#birth").val();
+				    	  var starttime = $("#starttime").val();
+				    	  var address = $("#address").val();
+				    	  var position = $("#position").val();
+				    	  if (teachername == '') {
+				    		  $.messager.alert('警告', '教师名字不能够为空！');
+				    		  return;
+				    	  }
+				    	  if (teachernum == '') {
+				    		  $.messager.alert('警告', '教师编号不能够为空！');
+				    		  return;
+				    	  }
+				    	  if (sex == '') {
+				    		  $.messager.alert('警告', '性别不能够为空！');
+				    		  return;
+				    	  }
+				    	  if (birth == '') {
+				    		  $.messager.alert('警告', '出生日期不能够为空！');
+				    		  return;
+				    	  }
+				    	  if (starttime == '') {
+				    		  $.messager.alert('警告', '入职时间不能够为空！');
+				    		  return;
+				    	  }
+				    	  if (address == '') {
+				    		  $.messager.alert('警告', '家庭住址不能够为空！');
+				    		  return;
+				    	  }
+				    	  if (position == '') {
+				    		  $.messager.alert('警告', '职称不能够为空！');
+				    		  return;
+				    	  }
+				    	  // 获取表单所有参数
+				    	  var data = getFormData("teacherForm");
+				    	  // alert(JSON.stringify(data));
+				    	  
+				    	  // 发送数据给后台处理
+				    	  $.post(requestUrl, data, function(data) {
+				    		  if (data.status) {
+				    			  // 重新加载表格
+				    			  $("#dg").datagrid('reload');
+				    			  // 关闭对话框
+				    			  $('#dl').dialog('close');
+				    			  // 清空输入记录
+				    			  $("#id").val('');
+				    			  $("#teachername").val('');
+				    			  $("#teachernum").val('');
+				    			  $("#sex").val('');
+				    			  $("#birth").val('');
+				    			  $("#starttime").val('');
+				    			  $("#address").val('');
+				    			  $("#position").val('');
+				    		  } else {
+				    			  $.messager.alert('警告', data.message);
+				    		  }
+				    	  }, "json");
+				    	  
+				      }
+				},{
+				      text:'取消',
+				      handler:function(){
+				    	  // 关闭对话框
+				    	  $('#dl').dialog('close'); 
+				    	  // 清空输入记录
+				    	  $("#teachername").val('');
+		    			  $("#teachernum").val('');
+		    			  $("#sex").val('');
+		    			  $("#birth").val('');
+		    			  $("#starttime").val('');
+		    			  $("#address").val('');
+		    			  $("#position").val('');
+				   	  }
+				}]
+			});
+
+			
+			/* 
+				datagrid数据格式：
+				[
+				 	{id:'编号',name:'姓名',num:'学号',rfid:'rfid',state:'课程状态'},
+				 	{id:'编号',name:'姓名',num:'学号',rfid:'rfid',state:'课程状态'},
+				 	{id:'编号',name:'姓名',num:'学号',rfid:'rfid',state:'课程状态'},
+				 	{id:'编号',name:'姓名',num:'学号',rfid:'rfid',state:'课程状态'},
+				 	...
+				]
+			*/
+			$('#dg').datagrid({
+			    url:'teacher/getData.do',  
+			    method:'get',
+			    singleSelect: false,
+			    toolbar: [
+					{
+						iconCls: 'icon-add',
+						text: '添加',
+						handler: function(){
+							// 设置requestUrl
+							requestUrl = "teacher/add.do";
+							$("#dl").dialog('open'); // 打开对话框
+						}
+					},{
+						iconCls: 'icon-edit',
+						text: '修改',
+						handler: function(){
+							// 设置requestUrl
+							requestUrl = "teacher/update.do";
+							// 获取选中的行
+							var rowData = $("#dg").datagrid('getSelected');
+							if (rowData != null) {
+								// 加载对话框表单数据
+								$("#teacherForm").form('load', rowData);
+								// 打开对话框
+								$("#dl").dialog('open');
+							}
+						}
+					},{
+						iconCls: 'icon-remove',
+						text: '删除',
+						handler: function(){
+							$.messager.confirm('警告', '确认删除吗？', function(r) {
+								if (r) {
+									// 获取选中行
+									var rowData = $("#dg").datagrid('getSelected');
+									var param = {id : rowData.id};
+									$.post('teacher/delete.do', param, function(data) {
+										if (data.status) {
+											// 删除成功后，重新加载表格
+											$('#dg').datagrid('reload');
+										} else {
+											$.messager.alert('警告', data.message);
+										}
+									}, 'json');
+								}
+							});
+						}
+					}, {
+						iconCls: 'icon-cancel',
+						text: '批量删除',
+						handler: function(){
+							// 获取选中行
+							var rows = $("#dg").datagrid('getSelections');
+							if (rows.length > 0) {
+								$.messager.confirm('警告', '确认删除吗？', function(r) {
+									if (r) {
+										// 该数组用于保存要删除的课程ID
+										var params = new Array();
+										for (var i = 0; i < rows.length; i++) {
+											params.push(rows[i].id);
+										}
+										$.post('teacher/deleteAll.do', {'ids' : params.join(',')}, function(data) {
+											if (data.status) {
+												// 删除成功后，重新加载表格
+												$('#dg').datagrid('reload');
+											} else {
+												$.messager.alert('警告', data.message);
+											}
+										}, 'json'); 
+									}
+								});
+							}
+						}
+					}     
+			    ],
+			    columns:[[
+					{checkbox:true,width:30},
+			        {field:'id',title:'编号',width:100},    
+			        {field:'teachername',title:'教师名称',width:200},
+			        {field:'teachernum',title:'教师编号',width:200},
+			        {field:'sex',title:'性别',width:200},
+			        {field:'birth',title:'出生日期',width:200},
+			        {field:'starttime',title:'入职时间',width:200},
+			        {field:'address',title:'家庭住址',width:200},
+			        {field:'position',title:'职称',width:200}
+			         
+			    ]],
+			    pagination: true, // 显示分页栏
+			    pageSize: 5, // 每页显示的结果数 
+			    pageList: [5, 15, 25, 50]
+			});  
+			
+			
+		});
+	</script>
+</body>
+</html>

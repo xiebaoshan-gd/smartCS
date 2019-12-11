@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<link rel="stylesheet" href="easyui/themes/bootstrap/easyui.css" />
+<link rel="stylesheet" href="easyui/themes/icon.css" />
+<script type="text/javascript" src="easyui/jquery.min.js" ></script>
+<script type="text/javascript" src="easyui/jquery.easyui.min.js" ></script>
+<script type="text/javascript" src="easyui/locale/easyui-lang-zh_CN.js" ></script>
+<script type="text/javascript" src="adminjs/jquery.form.js" ></script>
+</head>
+<body>
+	<ul id="tree"></ul>
+	<!-- 右键菜单 -->
+	<div id="menu" class="easyui-menu" style="width:120px;">
+	    <div id="add" data-options="iconCls:'icon-add'">添加</div>
+		<div id="update" data-options="iconCls:'icon-edit'">修改</div>
+		<div id="delete" data-options="iconCls:'icon-remove'">删除</div>
+	</div>
+	<!-- 对话框 -->
+	<div id="dl" style="padding:20px;">
+		<form id="menuForm">
+			<input type="hidden" id="id" name="id"/>
+			<input type="hidden" id="pid" name="pid"/>
+			<label for="name">名称：</label><input id="name" name="name" class="easyui-validatebox" data-options="required:true, missingMessage:'菜单名不能够为空'"/><br/><br/>
+			<label for="url">地址：</label><input id="url" name="url"/><br/><br/>
+			<label for="remark">描述：</label><textarea id="remark" name="remark" rows="3" cols="23"></textarea><br/><br/>
+		</form>
+	</div>
+	<script>
+		$(function() {
+			// 添加按钮绑定事件
+			$('#add').click(function() {
+				// 显示对话框
+				$('#dl').dialog('open');
+				// 初始化表单
+				initForm('menu/addMenu.do');
+			});
+			
+			// 修改按钮绑定事件
+			$('#update').click(function() {
+				// 修改菜单的信息加载到表单中
+				var node = $('#tree').tree('getSelected');
+				$('#id').val(node.id);
+				$('#name').val(node.text);
+				$('#pid').val(node.pid);
+				$('#url').val(node.url);
+				$('#remark').val(node.remark);
+				// 显示对话框
+				$('#dl').dialog('open');
+				// 初始化表单
+				initForm('menu/updateMenu.do');
+			});
+			
+			// 删除按钮绑定事件
+			$('#delete').click(function() {
+				// 获取选中节点
+				var node = $('#tree').tree('getSelected');
+				if (node.pid != 0) {
+					// 确认删除
+					$.messager.confirm('警告', '确认删除吗？', function(r) {
+						if (r) {
+							$.post('menu/deleteMenu.do', {id: node.id}, function(data) {
+								if (data.status) {
+									// 重新加载tree控件
+									$('#tree').tree('reload');
+								} else {
+									$.messager.alert('提示', data.message);
+								}
+							}, 'json');
+						}
+					});
+				}
+			});
+			
+			$("#tree").tree({
+				url: 'menu/getMenus.do',
+				onContextMenu: function(e, node) {
+					// 阻止事件的默认行为
+					e.preventDefault();
+					// 设置当前节点的选中状态
+					$(this).tree('select', node.target);
+					// 显示右键菜单
+					$('#menu').menu('show', {
+						left: e.pageX,
+						top: e.pageY
+					});
+					// 设置pid表单项的值
+					$('#pid').val(node.id);
+				}
+			});
+			
+			// 初始化对话框
+			$('#dl').dialog({
+				title: '菜单信息', // 标题
+				width: 300, // 宽度
+			    height: 255, // 高度
+				closed: true, // 默认是否关闭，true代表默认关闭
+				cache: false, // 是否缓存
+				modal: true, // 是否显示遮挡层
+				buttons:[{ // 按钮
+				      text:'保存', 
+				      handler:function(){
+				    	  var isValid = $('#menuForm').form('validate');
+				    	  if (isValid) {
+				    		  $('#menuForm').submit();
+				    	  }
+				      }
+				},{
+				      text:'取消',
+				      handler:function(){
+				    	 
+				   	  }
+				}]
+			});
+		});
+		
+		// 初始化表单
+		function initForm(url) {
+			// 初始化表单
+			$("#menuForm").ajaxForm({
+				url: url, // 提交url地址
+				type: 'get', // 提交方式
+				dataType: 'json', // 服务器返回的结果类型
+				success: function(data) {
+					if (data.status) {
+						// 清空表单
+						$('#menuForm')[0].reset()
+						// 关闭对话框
+						$("#dl").dialog('close');
+						// 重新加载tree控件
+						$("#tree").tree('reload');
+					} else {
+						$.messager.alert('提示', data.message);
+					}
+				},
+				error: function(data) {
+					$.messager.alert('警告', '服务器发生错误！');
+				}
+			});
+		}
+	</script>
+</body>
+</html>
